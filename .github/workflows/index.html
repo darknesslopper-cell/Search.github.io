@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ค้นหาชื่อ  นสต.</title>
+<style>
+  :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#10b981}
+  body{font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai UI", "Noto Sans", "Helvetica Neue", Arial; margin:0; background:linear-gradient(180deg,#071026 0%, #071b2b 100%); color:#e6eef6; padding:24px;}
+  .container{max-width:1100px;margin:0 auto;}
+  h1{font-size:1.4rem;margin:0 0 12px}
+  .card{background:rgba(255,255,255,0.03);padding:16px;border-radius:12px;box-shadow: 0 6px 20px rgba(2,6,23,0.6); margin-bottom:16px}
+  form .row{display:flex;gap:12px;flex-wrap:wrap}
+  label{font-size:0.85rem;color:var(--muted);display:block;margin-bottom:6px}
+  input[type="text"], input[type="number"], select{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;min-width:160px}
+  input[type="file"]{color:var(--muted)}
+  button{background:var(--accent);border:none;color:#042018;padding:8px 12px;border-radius:8px;cursor:pointer}
+  button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  .table-wrap{overflow:auto;max-height:380px;margin-top:12px;border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:0.95rem}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.03)}
+  th{position:sticky;top:0;background:rgba(0,0,0,0.15);backdrop-filter: blur(4px)}
+  td.thumb img{width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer}
+  tr:hover td{background:rgba(255,255,255,0.01)}
+  .search-row{display:flex;gap:8px;align-items:center}
+  .big-view{display:flex;gap:16px;align-items:flex-start;margin-top:14px;flex-wrap:wrap}
+  .big-view .photo{width:360px;height:360px;border-radius:10px;background:#061023;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .big-view .photo img{max-width:100%;max-height:100%;object-fit:contain}
+  .big-view .meta{flex:1;min-width:240px}
+  .muted{color:var(--muted);font-size:0.9rem}
+  .note{font-size:0.85rem;color:var(--muted);margin-top:8px}
+  @media (max-width:780px){
+    .big-view{flex-direction:column}
+    .big-view .photo{width:100%;height:260px}
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>ระบบค้นหา (นสต.)</h1>
+
+    <div class="card" id="formCard">
+      <form id="entryForm">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div style="min-width:220px">
+            <label>ชื่อ (ไม่ต้องใส่ นสต.)</label>
+            <input id="nameInput" type="text" placeholder="สมชาย ขายดี" required />
+          </div>
+          <div>
+            <label>กองร้อย (กอง)</label>
+            <select id="platoonSelect">
+              <!-- ตัวอย่างให้ 1-10 -->
+              <option value="1">1</option>
+            </select>
+          </div>
+          <div>
+            <label>อาคาร</label>
+            <select id="buildingSelect">
+              <option value="1">1</option>
+              <option value="2">2</option>
+            </select>
+          </div>
+          <div>
+            <label>เลขที่ (ขึ้นกับอาคาร)</label>
+            <input id="numberInput" type="number" min="1" value="1" required />
+          </div>
+          <div style="min-width:180px">
+            <label>รูปโปรไฟล์ (เลือกไฟล์)</label>
+            <input id="imageInput" type="file" accept="image/*" />
+          </div>
+          <div style="display:flex;flex-direction:column;justify-content:flex-end">
+            <button id="addBtn" type="submit">เพิ่มข้อมูล</button>
+            <button id="clearBtn" type="button" class="secondary" style="margin-top:8px">ล้างฟอร์ม</button>
+          </div>
+        </div>
+        <div class="note">กฎ: อาคาร1 เลขที่ 1–144, อาคาร2 เลขที่ 1–146. หมายเลขจะต้องไม่ซ้ำเดียวกันใน กองร้อย-อาคาร เดียวกัน</div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="search-row" style="flex:1;min-width:260px">
+          <label style="margin-right:8px">ค้นหา</label>
+          <input id="searchInput" type="text" placeholder="ค้นหาชื่อหรือ ก-อ-เลข เช่น 1-1-1" style="flex:1" />
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="exportBtn" class="secondary">ส่งออก JSON</button>
+          <button id="importBtn" class="secondary">นำเข้า JSON</button>
+          <input id="importFile" type="file" accept=".json" style="display:none" />
+          <button id="resetBtn" class="secondary">ลบทั้งหมด</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th style="width:56px">ลำดับ</th>
+              <th>ชื่อ</th>
+              <th>รหัส (ก-อ-เลข)</th>
+              <th>อาคาร</th>
+              <th>กองร้อย</th>
+              <th style="width:68px">รูป</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <!-- rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="big-view" id="detailView" style="display:none">
+        <div class="photo" id="detailPhoto"><img alt="ภาพใหญ่" src="" /></div>
+        <div class="meta">
+          <h3 id="detailName"></h3>
+          <div class="muted">รหัส: <span id="detailId"></span></div>
+          <div class="muted">อาคาร: <span id="detailBuilding"></span></div>
+          <div class="muted">กองร้อย: <span id="detailPlatoon"></span></div>
+          <div style="margin-top:12px">
+            <button id="editBtn">แก้ไขข้อมูล</button>
+            <button id="deleteBtn" class="secondary">ลบ</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/*
+  ระบบเก็บข้อมูลใน localStorage (key: 'nsd_registry')
+  โครงข้อมูลแต่ละรายการ:
+  { id: "<platoon>-<building>-<number>", name: "สมชาย ขายดี", platoon: "1", building: "1", number: 1, imageDataUrl: "data:..." }
+*/
+
+const STORAGE_KEY = 'nsd_registry_v1';
+let entries = [];
+
+const defaultPlaceholder = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500"><rect fill="%23061b2b" width="100%" height="100%"/><text x="50%" y="50%" fill="%2398b4c6" font-size="28" text-anchor="middle" font-family="Arial" dy=".3em">ไม่มีรูป</text></svg>'
+)}`;
+
+function saveEntries(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+function loadEntries(){ 
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){ try{ entries = JSON.parse(raw); }catch(e){ entries = []; } }
+  else { entries = []; }
+}
+
+// sample initial data (only if empty)
+function ensureSample(){
+  if(entries.length === 0){
+    entries.push({
+      id: '1-1-1',
+      name: 'สมชาย ขายดี',
+      platoon: '1',
+      building: '1',
+      number: 1,
+      imageDataUrl: defaultPlaceholder
+    });
+    // another sample
+    entries.push({
+      id: '1-2-1',
+      name: 'สมปอง ทดสอบ',
+      platoon: '1',
+      building: '2',
+      number: 1,
+      imageDataUrl: defaultPlaceholder
+    });
+    saveEntries();
+  }
+}
+
+function renderTable(filterText = ''){
+  const tbody = document.getElementById('resultsBody');
+  tbody.innerHTML = '';
+  const q = filterText.trim().toLowerCase();
+
+  const filtered = entries.filter(e=>{
+    if(!q) return true;
+    const name = ('นสต.' + e.name).toLowerCase();
+    const id = e.id.toLowerCase();
+    return name.includes(q) || id.includes(q) || e.name.toLowerCase().includes(q);
+  });
+
+  filtered.forEach((e, idx)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td>นสต.${escapeHtml(e.name)}</td>
+      <td>${escapeHtml(e.id)}</td>
+      <td>${escapeHtml(e.building)}</td>
+      <td>${escapeHtml(e.platoon)}</td>
+      <td class="thumb"><img src="${e.imageDataUrl || defaultPlaceholder}" alt="thumb" data-id="${e.id}" /></td>
+    `;
+    // click to show detail
+    tr.addEventListener('click', ()=> showDetail(e.id));
+    tbody.appendChild(tr);
+  });
+}
+
+function showDetail(id){
+  const e = entries.find(x=>x.id===id);
+  if(!e) return;
+  document.getElementById('detailView').style.display = 'flex';
+  document.getElementById('detailPhoto').querySelector('img').src = e.imageDataUrl || defaultPlaceholder;
+  document.getElementById('detailName').textContent = 'นสต.' + e.name;
+  document.getElementById('detailId').textContent = e.id;
+  document.getElementById('detailBuilding').textContent = e.building;
+  document.getElementById('detailPlatoon').textContent = e.platoon;
+
+  // attach edit/delete
+  const del = document.getElementById('deleteBtn');
+  del.onclick = ()=> {
+    if(confirm('ต้องการลบรายการนี้ใช่หรือไม่?')) {
+      entries = entries.filter(x=>x.id!==id);
+      saveEntries(); renderTable(document.getElementById('searchInput').value);
+      document.getElementById('detailView').style.display = 'none';
+    }
+  };
+
+  const edit = document.getElementById('editBtn');
+  edit.onclick = ()=> {
+    // populate form for edit (simple: remove old, fill form)
+    const nameInput = document.getElementById('nameInput');
+    const platoonSelect = document.getElementById('platoonSelect');
+    const buildingSelect = document.getElementById('buildingSelect');
+    const numberInput = document.getElementById('numberInput');
+
+    nameInput.value = e.name;
+    platoonSelect.value = e.platoon;
+    buildingSelect.value = e.building;
+    numberInput.value = e.number;
+    // remove old entry (will be replaced on submit)
+    entries = entries.filter(x=>x.id!==id);
+    saveEntries();
+    renderTable(document.getElementById('searchInput').value);
+    document.getElementById('detailView').style.display = 'none';
+    window.scrollTo({top:0, behavior:'smooth'});
+  };
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
+
+function validateNumberForBuilding(building, num){
+  const n = Number(num);
+  if(building === '1') return n >=1 && n <= 144;
+  return n >=1 && n <= 146;
+}
+
+function idExists(id){
+  return entries.some(e=>e.id === id);
+}
+
+// handle image to dataURL
+function fileToDataUrl(file){
+  return new Promise((res, rej)=>{
+    if(!file) return res(null);
+    const reader = new FileReader();
+    reader.onload = ()=> res(reader.result);
+    reader.onerror = ()=> rej(new Error('อ่านไฟล์ไม่ได้'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// init
+loadEntries();
+ensureSample();
+renderTable();
+
+document.getElementById('searchInput').addEventListener('input', (e)=>{
+  renderTable(e.target.value);
+});
+
+// update allowed max on building change
+const buildingSelect = document.getElementById('buildingSelect');
+const numberInput = document.getElementById('numberInput');
+function updateNumberLimits(){
+  const b = buildingSelect.value;
+  if(b === '1'){ numberInput.max = 144; numberInput.min = 1; if(Number(numberInput.value) > 144) numberInput.value = 144; }
+  else { numberInput.max = 146; numberInput.min = 1; if(Number(numberInput.value) > 146) numberInput.value = 146; }
+}
+buildingSelect.addEventListener('change', updateNumberLimits);
+updateNumberLimits();
+
+document.getElementById('entryForm').addEventListener('submit', async (ev)=>{
+  ev.preventDefault();
+  const name = document.getElementById('nameInput').value.trim();
+  const platoon = document.getElementById('platoonSelect').value;
+  const building = document.getElementById('buildingSelect').value;
+  const number = Number(document.getElementById('numberInput').value);
+  const file = document.getElementById('imageInput').files[0];
+
+  if(!name){ alert('กรุณากรอกชื่อ'); return; }
+  if(!validateNumberForBuilding(building, number)){ alert('เลขที่ไม่ถูกต้องตามขอบเขตของอาคาร'); return; }
+
+  const newId = `${platoon}-${building}-${number}`;
+  if(idExists(newId)){ alert('มีรหัสนี้อยู่แล้ว (กองร้อย-อาคาร-เลขที่ ซ้ำ)'); return; }
+
+  let dataUrl = defaultPlaceholder;
+  try {
+    const d = await fileToDataUrl(file);
+    if(d) dataUrl = d;
+  } catch(err){ console.warn(err); }
+
+  const entry = {
+    id: newId,
+    name,
+    platoon,
+    building,
+    number,
+    imageDataUrl: dataUrl
+  };
+  entries.push(entry);
+  saveEntries();
+  renderTable(document.getElementById('searchInput').value);
+  document.getElementById('entryForm').reset();
+  updateNumberLimits();
+});
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  document.getElementById('entryForm').reset();
+  updateNumberLimits();
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(confirm('ลบข้อมูลทั้งหมดในระบบหรือไม่?')) {
+    entries = [];
+    saveEntries();
+    renderTable();
+    document.getElementById('detailView').style.display = 'none';
+  }
+});
+
+// export / import
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(entries, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'nsd_registry_export.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', (ev)=>{
+  const f = ev.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=> {
+    try{
+      const imported = JSON.parse(reader.result);
+      if(Array.isArray(imported)){
+        // simple validation
+        const ok = imported.every(it=> it.id && it.name && it.platoon && it.building && it.number);
+        if(!ok) return alert('ไฟล์ JSON ไม่ตรงรูปแบบที่รับ');
+        // merge but avoid id dup
+        imported.forEach(it=>{
+          if(!entries.some(e=>e.id===it.id)) entries.push(it);
+        });
+        saveEntries();
+        renderTable();
+        alert('นำเข้าเรียบร้อย');
+      } else alert('ไฟล์ JSON ต้องเป็น array ของรายการ');
+    }catch(err){ alert('อ่านไฟล์ไม่ได้: ' + err.message); }
+  };
+  reader.readAsText(f);
+});
+
+// initial render done above
+
+</script>
+</body>
+</html>
